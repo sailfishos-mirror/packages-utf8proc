@@ -36,6 +36,8 @@
 :- encoding(utf8).
 :- use_module(library(plunit)).
 :- use_module(library(unicode)).
+:- use_module(library(aggregate)).
+:- use_module(library(lists)).
 
 test_utf8proc :-
     run_tests([ utf8proc_normalise,
