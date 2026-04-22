@@ -65,6 +65,12 @@ swipl_plugin(
     C_LIBS PkgConfig::UTF8PROC
     PL_LIBS unicode.pl)
 
+if(MINGW_ROOT)
+get_target_mingw_dlls(DirectDLLS plugin_unicode4pl)
+add_mingw_indirect_deps(DLLS ${DirectDLLS})
+install_dll(${DLLS})
+endif()
+
 pkg_doc(utf8proc
 	SECTION
 	    unicode.pl)
