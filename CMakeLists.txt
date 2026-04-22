@@ -18,4 +18,6 @@ pkg_doc(utf8proc
 	SECTION
 	    unicode.pl)
 
+test_libs(utf8proc)
+
 endif()
