@@ -34,7 +34,6 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <config.h>
 #include <SWI-Prolog.h>
 #include <utf8proc.h>
 #include <assert.h>
