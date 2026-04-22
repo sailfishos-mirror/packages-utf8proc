@@ -34,6 +34,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <config.h>
 #include <SWI-Prolog.h>
 #include <utf8proc.h>
 #include <assert.h>
@@ -59,16 +60,30 @@ static atom_t ATOM_stripmark;
 static atom_t ATOM_category;
 static atom_t ATOM_combining_class;
 static atom_t ATOM_bidi_class;
+#ifdef HAVE_UTF8PROC_BIDI_MIRRORED
 static atom_t ATOM_bidi_mirrored;
+#endif
 static atom_t ATOM_decomp_type;
 static atom_t ATOM_ignorable;
 static atom_t ATOM_boundclass;
+#ifdef HAVE_UTF8PROC_CHARWIDTH
 static atom_t ATOM_width;
+#endif
+#ifdef HAVE_UTF8PROC_AMBIGUOUS_WIDTH
 static atom_t ATOM_ambiguous_width;
+#endif
+#ifdef HAVE_UTF8PROC_TOUPPER
 static atom_t ATOM_uppercase;
+#endif
+#ifdef HAVE_UTF8PROC_TOLOWER
 static atom_t ATOM_lowercase;
+#endif
+#ifdef HAVE_UTF8PROC_TOTITLE
 static atom_t ATOM_titlecase;
+#endif
+#ifdef HAVE_UTF8PROC_INDIC_CONJUNCT_BREAK
 static atom_t ATOM_indic_conjunct_break;
+#endif
 
 
 /** unicode_property(?Code, ?Property)
@@ -178,12 +193,15 @@ static pmap boundclass_map[] =
   BOUNDCLASS(SPACINGMARK),
   BOUNDCLASS(PREPEND),
   BOUNDCLASS(ZWJ),
+#ifdef HAVE_UTF8PROC_BOUNDCLASS_EXTENDED_PICTOGRAPHIC
   BOUNDCLASS(EXTENDED_PICTOGRAPHIC),
   BOUNDCLASS(E_ZWG),
+#endif
   { 0 }
 };
 
 
+#ifdef HAVE_UTF8PROC_INDIC_CONJUNCT_BREAK
 #define ICB(n) { UTF8PROC_INDIC_CONJUNCT_BREAK_ ## n, #n, 0 }
 static pmap indic_conjunct_break_map[] =
 { ICB(NONE),
@@ -192,6 +210,7 @@ static pmap indic_conjunct_break_map[] =
   ICB(EXTEND),
   { 0 }
 };
+#endif
 
 
 /* Convert an integer property value (from the utf8proc property struct)
@@ -205,7 +224,13 @@ static bool
 unify_symbol(term_t arg, int code, pmap *map)
 { pmap *m;
 
-  if ( code == 0 && map != indic_conjunct_break_map )
+  /* `indic_conjunct_break_map` maps zero to `none`, so do not reject
+   * it as an unset property. */
+  if ( code == 0
+#ifdef HAVE_UTF8PROC_INDIC_CONJUNCT_BREAK
+       && map != indic_conjunct_break_map
+#endif
+     )
     return false;
 
   m = &map[code];
@@ -251,12 +276,16 @@ unify_symbol(term_t arg, int code, pmap *map)
 
 
 static foreign_t
-unicode_property(term_t code, term_t property)
+unicode_property(term_t code, term_t property, term_t silent)
 { int32_t uc;
   const utf8proc_property_t *p;
   atom_t pname;
   size_t parity;
   term_t arg = PL_new_term_ref();
+  int quiet = false;
+
+  if ( !PL_get_bool_ex(silent, &quiet) )
+    return false;
 
   if ( !PL_get_integer(code, &uc) )
   { wchar_t *ws;
@@ -287,31 +316,50 @@ unicode_property(term_t code, term_t property)
     return PL_unify_integer(arg, p->combining_class);
   else if ( pname == ATOM_bidi_class )
     return unify_symbol(arg, p->bidi_class, bidi_map);
+#ifdef HAVE_UTF8PROC_BIDI_MIRRORED
   else if ( pname == ATOM_bidi_mirrored )
     return PL_unify_bool(arg, p->bidi_mirrored);
+#endif
   else if ( pname == ATOM_decomp_type )
     return unify_symbol(arg, p->decomp_type, decomp_map);
   else if ( pname == ATOM_ignorable )
     return PL_unify_bool(arg, p->ignorable);
   else if ( pname == ATOM_boundclass )
     return unify_symbol(arg, p->boundclass, boundclass_map);
+#ifdef HAVE_UTF8PROC_CHARWIDTH
   else if ( pname == ATOM_width )
     return PL_unify_integer(arg, p->charwidth);
+#endif
+#ifdef HAVE_UTF8PROC_AMBIGUOUS_WIDTH
   else if ( pname == ATOM_ambiguous_width )
     return PL_unify_bool(arg, p->ambiguous_width);
+#endif
+#ifdef HAVE_UTF8PROC_INDIC_CONJUNCT_BREAK
   else if ( pname == ATOM_indic_conjunct_break )
     return unify_symbol(arg, p->indic_conjunct_break,
 			indic_conjunct_break_map);
+#endif
+#ifdef HAVE_UTF8PROC_TOUPPER
   else if ( pname == ATOM_uppercase )
   { int32_t m = utf8proc_toupper(uc);
     return m != uc && PL_unify_integer(arg, m);
-  } else if ( pname == ATOM_lowercase )
+  }
+#endif
+#ifdef HAVE_UTF8PROC_TOLOWER
+  else if ( pname == ATOM_lowercase )
   { int32_t m = utf8proc_tolower(uc);
     return m != uc && PL_unify_integer(arg, m);
-  } else if ( pname == ATOM_titlecase )
+  }
+#endif
+#ifdef HAVE_UTF8PROC_TOTITLE
+  else if ( pname == ATOM_titlecase )
   { int32_t m = utf8proc_totitle(uc);
     return m != uc && PL_unify_integer(arg, m);
-  } else
+  }
+#endif
+  else if ( quiet )
+    return false;
+  else
     return PL_domain_error("unicode_property", property);
 }
 
@@ -439,6 +487,8 @@ unicode_option_mask(term_t options, term_t mask_t)
 		 *	     GRAPHEMES		*
 		 *******************************/
 
+#ifdef HAVE_UTF8PROC_GRAPHEME_BREAK_STATEFUL
+
 /* Forward mode: decompose Text into grapheme clusters, emit each
  * cluster as an atom/string (driven by out_type) in Graphemes.
  */
@@ -561,11 +611,14 @@ pl_string_graphemes(term_t text, term_t graphemes)
 { return text_graphemes(text, graphemes, PL_STRING);
 }
 
+#endif /* HAVE_UTF8PROC_GRAPHEME_BREAK_STATEFUL */
+
 
 		 /*******************************
 		 *    VERSION AND VALIDITY	*
 		 *******************************/
 
+#ifdef HAVE_UTF8PROC_UNICODE_VERSION
 /** unicode_version(-Version) is det.
  *
  * Version is an atom like '15.1.0' describing the Unicode version the
@@ -575,8 +628,10 @@ static foreign_t
 unicode_version(term_t version)
 { return PL_unify_atom_chars(version, utf8proc_unicode_version());
 }
+#endif
 
 
+#ifdef HAVE_UTF8PROC_CODEPOINT_VALID
 /** unicode_codepoint_valid(+Code) is semidet.
  *
  * True when Code is a non-negative integer in the Unicode range and
@@ -595,6 +650,7 @@ unicode_codepoint_valid(term_t code)
   const utf8proc_property_t *p = utf8proc_get_property(uc);
   return p->category != UTF8PROC_CATEGORY_CN;
 }
+#endif
 
 
 		 /*******************************
@@ -609,16 +665,30 @@ install_unicode4pl()
 { MKATOM(category);
   MKATOM(combining_class);
   MKATOM(bidi_class);
+#ifdef HAVE_UTF8PROC_BIDI_MIRRORED
   MKATOM(bidi_mirrored);
+#endif
   MKATOM(decomp_type);
   MKATOM(ignorable);
   MKATOM(boundclass);
+#ifdef HAVE_UTF8PROC_CHARWIDTH
   MKATOM(width);
+#endif
+#ifdef HAVE_UTF8PROC_AMBIGUOUS_WIDTH
   MKATOM(ambiguous_width);
+#endif
+#ifdef HAVE_UTF8PROC_TOUPPER
   MKATOM(uppercase);
+#endif
+#ifdef HAVE_UTF8PROC_TOLOWER
   MKATOM(lowercase);
+#endif
+#ifdef HAVE_UTF8PROC_TOTITLE
   MKATOM(titlecase);
+#endif
+#ifdef HAVE_UTF8PROC_INDIC_CONJUNCT_BREAK
   MKATOM(indic_conjunct_break);
+#endif
 
   MKATOM(stable);
   MKATOM(compat);
@@ -637,11 +707,17 @@ install_unicode4pl()
 
   assert(sizeof(char) == sizeof(uint8_t));
 
-  PL_register_foreign("$unicode_property",       2, unicode_property,	      0);
+  PL_register_foreign("$unicode_property",       3, unicode_property,	      0);
   PL_register_foreign("unicode_map",		 3, unicode_map,	      0);
   PL_register_foreign("unicode_option_mask",	 2, unicode_option_mask,      0);
+#ifdef HAVE_UTF8PROC_GRAPHEME_BREAK_STATEFUL
   PL_register_foreign("atom_graphemes",		 2, pl_atom_graphemes,	      0);
   PL_register_foreign("string_graphemes",	 2, pl_string_graphemes,      0);
+#endif
+#ifdef HAVE_UTF8PROC_UNICODE_VERSION
   PL_register_foreign("unicode_version",	 1, unicode_version,	      0);
+#endif
+#ifdef HAVE_UTF8PROC_CODEPOINT_VALID
   PL_register_foreign("unicode_codepoint_valid", 1, unicode_codepoint_valid,  0);
+#endif
 }

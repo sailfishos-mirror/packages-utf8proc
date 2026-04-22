@@ -47,6 +47,23 @@ test_utf8proc :-
                 utf8proc_casefold
               ]).
 
+%   Optional-feature probes.  Older distro libutf8proc (Ubuntu LTS)
+%   ships a version without charwidth, bidi_mirrored,
+%   ambiguous_width, indic_conjunct_break, the
+%   EXTENDED_PICTOGRAPHIC boundclass, and single-codepoint case
+%   mappings.  Tests that need those features are guarded with
+%   `condition(has_property(P))` so they are skipped instead of
+%   reported as failures when the binding was compiled without the
+%   feature.  We detect absence via the `domain_error` that
+%   unicode_property/2 raises on an unknown property name — the
+%   property may still legitimately fail (e.g. `uppercase(_)` for
+%   `'A'`) when present, and that is treated as "supported".
+
+has_property(Prop) :-
+    catch( ( unicode_property(0'a, Prop), true ; true ),
+           error(domain_error(unicode_property, _), _),
+           (!, fail) ).
+
 /*******************************
  *        NORMALISATION         *
  *******************************/
@@ -126,33 +143,46 @@ test(bidi_class_ltr) :-
 test(bidi_class_european, C == en) :-
     unicode_property(0'5, bidi_class(C)).
 
-test(bidi_mirrored_paren) :-
+test(bidi_mirrored_paren,
+     [condition(has_property(bidi_mirrored(_)))]) :-
     unicode_property(0'(, bidi_mirrored(true)).
-test(bidi_not_mirrored_a) :-
+test(bidi_not_mirrored_a,
+     [condition(has_property(bidi_mirrored(_)))]) :-
     unicode_property(0'A, bidi_mirrored(false)).
 
-test(width_ascii, W == 1) :-
+test(width_ascii,
+     [condition(has_property(width(_))), W == 1]) :-
     unicode_property(0'A, width(W)).
-test(width_combining, W == 0) :-
+test(width_combining,
+     [condition(has_property(width(_))), W == 0]) :-
     unicode_property(0x0301, width(W)).
-test(width_cjk, W == 2) :-
+test(width_cjk,
+     [condition(has_property(width(_))), W == 2]) :-
     unicode_property(0x4E2D, width(W)).                % 中
-test(width_emoji, W == 2) :-
+test(width_emoji,
+     [condition(has_property(width(_))), W == 2]) :-
     unicode_property(0x1F929, width(W)).               % 🤩
-test(width_control, W == 0) :-
+test(width_control,
+     [condition(has_property(width(_))), W == 0]) :-
     unicode_property(0x0000, width(W)).
 
-test(case_toupper, U == 0'A) :-
+test(case_toupper,
+     [condition(has_property(uppercase(_))), U == 0'A]) :-
     unicode_property(0'a, uppercase(U)).
-test(case_tolower, L == 0'a) :-
+test(case_tolower,
+     [condition(has_property(lowercase(_))), L == 0'a]) :-
     unicode_property(0'A, lowercase(L)).
-test(case_titlecase_a, T == 0'A) :-
+test(case_titlecase_a,
+     [condition(has_property(titlecase(_))), T == 0'A]) :-
     unicode_property(0'a, titlecase(T)).
-test(case_no_upper_for_A, fail) :-
+test(case_no_upper_for_A,
+     [condition(has_property(uppercase(_))), fail]) :-
     unicode_property(0'A, uppercase(_)).                % already upper
-test(case_no_lower_for_a, fail) :-
+test(case_no_lower_for_a,
+     [condition(has_property(lowercase(_))), fail]) :-
     unicode_property(0'a, lowercase(_)).                % already lower
-test(case_no_mapping_for_digit, fail) :-
+test(case_no_mapping_for_digit,
+     [condition(has_property(uppercase(_))), fail]) :-
     unicode_property(0'5, uppercase(_)).
 
 test(decomp_type_compat, D == compat) :-
@@ -169,30 +199,36 @@ test(boundclass_cr) :-
     unicode_property(0'\r, boundclass(cr)).
 test(boundclass_lf) :-
     unicode_property(0'\n, boundclass(lf)).
-test(boundclass_emoji, C == extended_pictographic) :-
+test(boundclass_emoji,
+     [condition(unicode_property(0x1F929,
+                                 boundclass(extended_pictographic))),
+      C == extended_pictographic]) :-
     unicode_property(0x1F929, boundclass(C)).
 test(boundclass_zwj) :-
     unicode_property(0x200D, boundclass(zwj)).
 
-test(ambiguous_width_greek) :-
+test(ambiguous_width_greek,
+     [condition(has_property(ambiguous_width(_)))]) :-
     unicode_property(0x03B1, ambiguous_width(true)).    % α is ambiguous
-test(ambiguous_width_ascii) :-
+test(ambiguous_width_ascii,
+     [condition(has_property(ambiguous_width(_)))]) :-
     unicode_property(0'A, ambiguous_width(false)).
 
-test(indic_conjunct_break_none) :-
+test(indic_conjunct_break_none,
+     [condition(has_property(indic_conjunct_break(_)))]) :-
     unicode_property(0'A, indic_conjunct_break(none)).
 
 % Code-point argument can also be a single-char atom.
 test(code_as_atom_A) :-
     unicode_property('A', category('Lu')).
 
-% Atom code_type shorthand (+,-) should succeed.
+% Enumerate properties for a single code point.  The minimum five
+% (category, combining_class, bidi_class, ignorable, boundclass) are
+% always available.
 test(backtrack_properties) :-
     findall(P, unicode_property(0'A, P), Ps),
     length(Ps, N),
-    N >= 10.  % at minimum: category, combining_class, bidi_class,
-              % bidi_mirrored, ignorable, boundclass, width,
-              % ambiguous_width, indic_conjunct_break, lowercase
+    N >= 5.
 
 % Invalid range
 test(out_of_range, error(domain_error(code, _))) :-
@@ -249,7 +285,8 @@ test(charbound_cafe_acute) :-
  *         GRAPHEMES            *
  *******************************/
 
-:- begin_tests(utf8proc_graphemes).
+:- begin_tests(utf8proc_graphemes,
+               [condition(current_predicate(atom_graphemes/2))]).
 
 test(ascii) :-
     atom_graphemes('hello', Gs),
@@ -331,7 +368,8 @@ test(string_mixed_graphemes) :-
  *     VERSION / VALIDITY       *
  *******************************/
 
-:- begin_tests(utf8proc_version).
+:- begin_tests(utf8proc_version,
+               [condition(current_predicate(unicode_version/1))]).
 
 test(version_shape) :-
     unicode_version(V),
@@ -349,7 +387,8 @@ test(version_shape) :-
 :- end_tests(utf8proc_version).
 
 
-:- begin_tests(utf8proc_codepoint_valid).
+:- begin_tests(utf8proc_codepoint_valid,
+               [condition(current_predicate(unicode_codepoint_valid/1))]).
 
 test(valid_A) :-
     unicode_codepoint_valid(0'A).

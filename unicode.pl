@@ -306,18 +306,25 @@ unicode_casefold(In, Out) :-
 unicode_property(Code, Property) :-
     nonvar(Code), nonvar(Property),
     !,
-    '$unicode_property'(Code, Property).
+    '$unicode_property'(Code, Property, false).
 unicode_property(Code, Property) :-
     nonvar(Code),
     !,
     property(Property),
-    '$unicode_property'(Code, Property).
+    '$unicode_property'(Code, Property, true).
 unicode_property(Code, Property) :-
     var(Code),
     !,
     between(0, 0x10ffff, Code),
     property(Property),
-    '$unicode_property'(Code, Property).
+    '$unicode_property'(Code, Property, true).
+
+%   The third argument of `$unicode_property/3` is a `Silent` flag.
+%   When `true`, the C layer returns `false` instead of raising
+%   `domain_error(unicode_property, ...)` for a property name the
+%   binding was compiled without (older libutf8proc versions lack
+%   some fields).  Enumeration modes set it to `true` so
+%   property/1 clauses for absent features are silently skipped.
 
 property(category(_)).
 property(combining_class(_)).

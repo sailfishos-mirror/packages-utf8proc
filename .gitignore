@@ -15,6 +15,7 @@
 Makefile
 autom4te.cache
 config.*
+!config.h.cmake
 configure
 unicode.tex
 utf8proc.tex
