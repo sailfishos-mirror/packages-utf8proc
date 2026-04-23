@@ -384,3 +384,19 @@ property(indic_conjunct_break(_)).
 %   _assigned_ Unicode code point.  Unassigned code points (general
 %   category `Cn`), surrogate halves (`Cs`), and integers outside
 %   `0..0x10FFFF` all fail.
+
+
+                /*******************************
+                *           SANDBOX            *
+                *******************************/
+
+:- multifile
+    sandbox:safe_primitive/1.
+
+sandbox:safe_primitive(unicode:unicode_property(_,_)).
+sandbox:safe_primitive(unicode:unicode_map(_,_,_)).
+sandbox:safe_primitive(unicode:unicode_property(_,_)).
+sandbox:safe_primitive(unicode:unicode_version(_)).
+sandbox:safe_primitive(unicode:unicode_codepoint_valid(_)).
+sandbox:safe_primitive(unicode:atom_graphemes(_,_)).
+sandbox:safe_primitive(unicode:string_graphemes(_,_)).
