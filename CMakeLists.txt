@@ -41,6 +41,10 @@ utf8proc_has_field(indic_conjunct_break HAVE_UTF8PROC_INDIC_CONJUNCT_BREAK)
 # Enum value — can't use check_symbol_exists (it's not a macro).
 check_c_source_compiles("
 #include <utf8proc.h>
+int main(void) { return UTF8PROC_BOUNDCLASS_E_BASE; }
+" HAVE_UTF8PROC_BOUNDCLASS_E_BASE)
+check_c_source_compiles("
+#include <utf8proc.h>
 int main(void) { return UTF8PROC_BOUNDCLASS_EXTENDED_PICTOGRAPHIC; }
 " HAVE_UTF8PROC_BOUNDCLASS_EXTENDED_PICTOGRAPHIC)
 
