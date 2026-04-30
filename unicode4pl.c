@@ -660,6 +660,34 @@ unicode_codepoint_valid(term_t code)
 #define MKATOM(n) \
 	ATOM_ ## n = PL_new_atom(#n)
 
+/* Kernel atom-normalisation callback.  Registered with
+ * PL_atom_normalize_hook in install_unicode4pl().  Performs NFC
+ * normalisation on UTF-8 in place: the NFC result is always shorter
+ * than or equal to the input, so the result fits in the original
+ * buffer.  On return *len holds the new byte length.  Returns 0 on
+ * success, -1 on error.
+ */
+static int
+utf8proc_normalize_cb(unsigned char *in, size_t *len)
+{ utf8proc_uint8_t *result;
+  ssize_t out_len;
+
+  out_len = utf8proc_map((uint8_t*)in, (ssize_t)*len, &result,
+			 UTF8PROC_STABLE | UTF8PROC_COMPOSE);
+  if ( out_len < 0 )
+    return -1;
+
+  if ( (size_t)out_len != *len ||
+       memcmp(result, in, (size_t)out_len) != 0 )
+  { assert((size_t)out_len <= *len);
+    memcpy(in, result, (size_t)out_len);
+    *len = (size_t)out_len;
+  }
+  free(result);
+  return 0;
+}
+
+
 install_t
 install_unicode4pl()
 { MKATOM(category);
@@ -720,4 +748,6 @@ install_unicode4pl()
 #ifdef HAVE_UTF8PROC_CODEPOINT_VALID
   PL_register_foreign("unicode_codepoint_valid", 1, unicode_codepoint_valid,  0);
 #endif
+
+  PL_atom_normalize_hook(utf8proc_normalize_cb);
 }

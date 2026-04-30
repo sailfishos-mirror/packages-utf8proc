@@ -46,7 +46,8 @@ test_utf8proc :-
                 utf8proc_graphemes,
                 utf8proc_version,
                 utf8proc_codepoint_valid,
-                utf8proc_casefold
+                utf8proc_casefold,
+                utf8proc_normalize_hook
               ]).
 
 %   Optional-feature probes.  Older distro libutf8proc (Ubuntu LTS)
@@ -112,6 +113,63 @@ test(nfc_ligature_preserved) :-
     X == 'ﬃ'.
 
 :- end_tests(utf8proc_normalise).
+
+
+/*******************************
+ *  KERNEL NORMALIZE HOOK       *
+ *******************************/
+
+% Loading library(unicode) registers utf8proc as the kernel's
+% Unicode normalisation hook (PL_atom_normalize_hook).  These tests
+% exercise the read_term/2,3 normalize(true) option and the writeq
+% NFC-quoting behaviour that depend on it.
+
+:- begin_tests(utf8proc_normalize_hook).
+
+test(read_term_normalize_nfc) :-
+    atom_codes(NFD,         [0'c, 0'a, 0'f, 0'e, 0x0301]),
+    atom_codes(Precomposed, [0'c, 0'a, 0'f, 0xe9]),
+    read_term_from_atom(NFD,         T1, [normalize(true)]),
+    read_term_from_atom(Precomposed, T2, [normalize(true)]),
+    T1 == T2.
+
+test(read_term_no_normalize_keeps_distinct) :-
+    atom_codes(NFD,         [0'c, 0'a, 0'f, 0'e, 0x0301]),
+    atom_codes(Precomposed, [0'c, 0'a, 0'f, 0xe9]),
+    read_term_from_atom(NFD,         T1, []),
+    read_term_from_atom(Precomposed, T2, []),
+    T1 \== T2.
+
+test(read_term_normalize_does_not_touch_quoted) :-
+    atom_codes(QuotedNFD, [0'', 0'c, 0'a, 0'f, 0'e, 0x0301, 0'']),
+    atom_codes(NFD,       [0'c, 0'a, 0'f, 0'e, 0x0301]),
+    read_term_from_atom(QuotedNFD, T, [normalize(true)]),
+    atom_codes(T, NFDCodes),
+    atom_codes(NFD, NFDCodes).
+
+test(flag_default_normalize) :-
+    setup_call_cleanup(
+        ( current_prolog_flag(unicode_normalize, Old),
+          set_prolog_flag(unicode_normalize, true) ),
+        ( atom_codes(A1, [0'c, 0'a, 0'f, 0'e, 0x0301]),
+          atom_codes(A2, [0'c, 0'a, 0'f, 0xe9]),
+          read_term_from_atom(A1, T1, []),
+          read_term_from_atom(A2, T2, []),
+          T1 == T2 ),
+        set_prolog_flag(unicode_normalize, Old)).
+
+test(writeq_quotes_nfd_atom) :-
+    atom_codes(NFD, [0'c, 0'a, 0'f, 0'e, 0x0301]),
+    with_output_to(string(S), writeq(NFD)),
+    sub_string(S, 0, 1, _, "'"),
+    sub_string(S, _, 1, 0, "'").
+
+test(writeq_does_not_quote_nfc_atom) :-
+    atom_codes(NFC, [0'c, 0'a, 0'f, 0xe9]),
+    with_output_to(string(S), writeq(NFC)),
+    \+ sub_string(S, 0, 1, _, "'").
+
+:- end_tests(utf8proc_normalize_hook).
 
 
 /*******************************

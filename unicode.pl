@@ -76,6 +76,13 @@ Three levels of API are provided:
 Grapheme clusters (user-perceived characters) can be iterated with
 atom_graphemes/2 and string_graphemes/2.
 
+Loading this library also installs a Unicode NFC normalisation hook
+into the SWI-Prolog kernel.  This enables the `normalize(true)`
+option of read_term/2,3 and read_clause/2,3, and the corresponding
+`unicode_normalize` Prolog flag.  The kernel's quoted-write rule
+that force-quotes atoms containing combining marks is independent
+and works even without this library loaded.
+
 Lump handling:
 
 ==
