@@ -376,7 +376,11 @@ property(indic_conjunct_break(_)).
 %!  unicode_version(-Version) is det.
 %
 %   Version is an atom describing the Unicode version implemented by
-%   the linked utf8proc library, e.g. `'15.1.0'`.
+%   the linked utf8proc library, e.g. `'15.1.0'`.  This drives the
+%   normalisation, case-folding and grapheme-cluster predicates in
+%   this module, and may differ from the Unicode version of the
+%   SWI-Prolog source syntax classifier reported by the read-only
+%   Prolog flag `unicode_syntax_version`.
 
 %!  unicode_codepoint_valid(+Code) is semidet.
 %
