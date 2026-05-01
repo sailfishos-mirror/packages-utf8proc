@@ -251,10 +251,10 @@ unicode_casefold(In, Out) :-
 %   Supported properties:
 %
 %       * category(Atom)
-%       Unicode general category.  Atom is one of `cc`, `cf`, `cn`,
-%       `co`, `cs`, `ll`, `lm`, `lo`, `lt`, `lu`, `mc`, `me`, `mn`,
-%       `nd`, `nl`, `no`, `pc`, `pd`, `pe`, `pf`, `pi`, `po`, `ps`,
-%       `sc`, `sk`, `sm`, `so`, `zl`, `zp`, `zs`.  When querying, the
+%       Unicode general category.  Atom is one of `Cc`, `Cf`, `Cn`,
+%       `Co`, `Cs`, `Ll`, `Lm`, `Lo`, `Lt`, `Lu`, `Mc`, `Me`, `Mn`,
+%       `Nd`, `Nl`, `No`, `Pc`, `Pd`, `Pe`, `Pf`, `Pi`, `Po`, `Ps`,
+%       `Sc`, `Sk`, `Sm`, `So`, `Zl`, `Zp`, `Zs`.  When querying, the
 %       single capital letter of a subcategory stands for all its
 %       subcategories; e.g.
 %
