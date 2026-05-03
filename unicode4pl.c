@@ -688,8 +688,10 @@ utf8proc_normalize_cb(unsigned char *in, size_t *len)
 }
 
 
+static PL_atom_normalize_t old_hook = NULL;
+
 install_t
-install_unicode4pl()
+install_unicode4pl(void)
 { MKATOM(category);
   MKATOM(combining_class);
   MKATOM(bidi_class);
@@ -749,5 +751,10 @@ install_unicode4pl()
   PL_register_foreign("unicode_codepoint_valid", 1, unicode_codepoint_valid,  0);
 #endif
 
-  PL_atom_normalize_hook(utf8proc_normalize_cb);
+  old_hook = PL_atom_normalize_hook(utf8proc_normalize_cb);
+}
+
+install_t
+uninstall_unicode4pl(void)
+{ PL_atom_normalize_hook(old_hook);
 }
