@@ -95,6 +95,9 @@ typedef struct pmap
   atom_t	atom;
 } pmap;
 
+#define UNIFY_SYMBOL(t, c, map) \
+	unify_symbol(t, c, map ## _map, sizeof(map ## _map)/sizeof(pmap))
+
 #define CAT(n) { UTF8PROC_CATEGORY_ ## n, #n, 0 }
 static pmap category_map[] =
 { CAT(LU),
@@ -227,7 +230,7 @@ static pmap indic_conjunct_break_map[] =
  * capital initial.
  */
 static bool
-unify_symbol(term_t arg, int code, pmap *map)
+unify_symbol(term_t arg, int code, pmap *map, size_t size)
 { pmap *m;
 
   /* `indic_conjunct_break_map` maps zero to `none`, so do not reject
@@ -239,11 +242,14 @@ unify_symbol(term_t arg, int code, pmap *map)
      )
     return false;
 
-  m = &map[code];
-  if ( m->code != code )
-  { for(m=map; m->name && m->code != code; m++)
+  if ( code < size && map[code].code == code )
+  { m = &map[code];
+  } else
+  { m = map;
+    pmap *end = &m[size];
+    for(; map < end && m->code != code; m++)
       ;
-    if ( !m->name )
+    if ( map == end || !m->name )
       return false;
   }
 
@@ -317,21 +323,21 @@ unicode_property(term_t code, term_t property, term_t silent)
   _PL_get_arg(1, property, arg);
 
   if ( pname == ATOM_category )
-    return unify_symbol(arg, p->category, category_map);
+    return UNIFY_SYMBOL(arg, p->category, category);
   else if ( pname == ATOM_combining_class )
     return PL_unify_integer(arg, p->combining_class);
   else if ( pname == ATOM_bidi_class )
-    return unify_symbol(arg, p->bidi_class, bidi_map);
+    return UNIFY_SYMBOL(arg, p->bidi_class, bidi);
 #ifdef HAVE_UTF8PROC_BIDI_MIRRORED
   else if ( pname == ATOM_bidi_mirrored )
     return PL_unify_bool(arg, p->bidi_mirrored);
 #endif
   else if ( pname == ATOM_decomp_type )
-    return unify_symbol(arg, p->decomp_type, decomp_map);
+    return UNIFY_SYMBOL(arg, p->decomp_type, decomp);
   else if ( pname == ATOM_ignorable )
     return PL_unify_bool(arg, p->ignorable);
   else if ( pname == ATOM_boundclass )
-    return unify_symbol(arg, p->boundclass, boundclass_map);
+    return UNIFY_SYMBOL(arg, p->boundclass, boundclass);
 #ifdef HAVE_UTF8PROC_CHARWIDTH
   else if ( pname == ATOM_width )
     return PL_unify_integer(arg, p->charwidth);
@@ -342,8 +348,8 @@ unicode_property(term_t code, term_t property, term_t silent)
 #endif
 #ifdef HAVE_UTF8PROC_INDIC_CONJUNCT_BREAK
   else if ( pname == ATOM_indic_conjunct_break )
-    return unify_symbol(arg, p->indic_conjunct_break,
-			indic_conjunct_break_map);
+    return UNIFY_SYMBOL(arg, p->indic_conjunct_break,
+			indic_conjunct_break);
 #endif
 #ifdef HAVE_UTF8PROC_TOUPPER
   else if ( pname == ATOM_uppercase )
