@@ -13,8 +13,11 @@ include(CheckCSourceCompiles)
 
 # Propagate include directories and linker flags from the pkg-config
 # target so the feature probes below see the right headers/libs.
+# Use the imported target so library search paths (-L) are included;
+# bare ${UTF8PROC_LIBRARIES} only carries the -l name and fails to link
+# against an out-of-tree install (e.g. WASM/emscripten cross-build).
 set(CMAKE_REQUIRED_INCLUDES ${UTF8PROC_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_LIBRARIES ${UTF8PROC_LIBRARIES})
+set(CMAKE_REQUIRED_LIBRARIES PkgConfig::UTF8PROC)
 
 # Fields of utf8proc_property_t.  Older distro builds (Ubuntu LTS)
 # ship a utf8proc that predates `charwidth`, `ambiguous_width`, and

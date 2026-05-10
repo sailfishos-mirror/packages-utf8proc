@@ -443,7 +443,7 @@ static foreign_t
 unicode_map(term_t in, term_t out, term_t options)
 { int mask;
   size_t len_in;
-  ssize_t len_out;
+  utf8proc_ssize_t len_out;
   char *utf8_in;
   uint8_t *utf8_out;
 
@@ -682,9 +682,9 @@ unicode_codepoint_valid(term_t code)
 static int
 utf8proc_normalize_cb(unsigned char *in, size_t *len)
 { utf8proc_uint8_t *result;
-  ssize_t out_len;
+  utf8proc_ssize_t out_len;
 
-  out_len = utf8proc_map((uint8_t*)in, (ssize_t)*len, &result,
+  out_len = utf8proc_map((uint8_t*)in, *len, &result,
 			 UTF8PROC_STABLE | UTF8PROC_COMPOSE);
   if ( out_len < 0 )
     return -1;
