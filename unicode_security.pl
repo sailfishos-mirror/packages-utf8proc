@@ -51,12 +51,93 @@
 
 This library implements helpers from
 [UTS #39 (Unicode Security Mechanisms)](https://www.unicode.org/reports/tr39/)
-and the script properties of [UAX #24](https://www.unicode.org/reports/tr24/):
-confusable skeletons, mixed-script detection, and identifier restriction
-levels.
+and the script properties of [UAX #24](https://www.unicode.org/reports/tr24/).
+It is intended for linters, identifier validators and any code that
+needs to reason about confusable look-alike text or mixed-script
+identifiers.  It does **not** alter the Prolog reader; UTS #39 is
+deliberately a library-level facility.
 
-It is independent from `library(unicode)`: that module wraps libutf8proc
-for normalization and per-codepoint properties; this one ships its own
-UCD-derived tables built from the files under
-`packages/utf8proc/data/`.  See `etc/gen_uts39.pl` to regenerate.
+The library ships its own UCD-derived tables and is independent of
+`library(unicode)` (which wraps libutf8proc for normalisation and
+per-code-point properties).  See `etc/gen_uts39.pl` in the package
+directory to regenerate the tables on a Unicode-version bump.
+
+Predicates fall into three groups:
+
+  - Per-code-point lookups: unicode_script/2,
+    unicode_script_extensions/2, unicode_identifier_status/2,
+    unicode_identifier_type/2.
+  - Skeleton and confusable test (UTS #39 §4): unicode_skeleton/2,
+    unicode_confusable/2, unicode_confusable/3.
+  - String-level identifier checks (UTS #39 §5):
+    unicode_resolved_scripts/2, unicode_restriction_level/2.
 */
+
+%!  unicode_script(+Code:integer, -Script:atom) is det.
+%
+%   True when Script is the UAX #24 Script_Property of Code.  Script is
+%   a lower-case atom of the long property value (`latin`, `cyrillic`,
+%   `han`, `common`, `inherited`, ...).  Unassigned code points resolve
+%   to `common`.
+
+%!  unicode_script_extensions(+Code:integer, -Scripts:list(atom)) is det.
+%
+%   Scripts is the sorted list of UAX #24 Script_Extensions of Code.
+%   For most code points this is a singleton `[Script]`.
+
+%!  unicode_identifier_status(+Code:integer, -Status:atom) is det.
+%
+%   Status is `allowed` if Code appears in UTS #39 IdentifierStatus.txt
+%   with status `Allowed`, else `restricted`.
+
+%!  unicode_identifier_type(+Code:integer, -Types:list(atom)) is det.
+%
+%   Types is the sorted list of UTS #39 Identifier_Type atoms for Code
+%   (`recommended`, `inclusion`, `technical`, `obsolete`,
+%   `limited_use`, `exclusion`, `not_nfkc`, `not_xid`,
+%   `default_ignorable`, `deprecated`, `uncommon_use`).  Code points
+%   not listed in IdentifierType.txt yield `[]`.
+
+%!  unicode_skeleton(+Text, -Skeleton:atom) is det.
+%
+%   Compute the UTS #39 §4 skeleton of Text: apply NFD, substitute each
+%   code point with its confusables.txt prototype string, then apply
+%   NFD again.  Two strings are confusable iff their skeletons compare
+%   equal.
+
+%!  unicode_confusable(+T1, +T2) is semidet.
+%
+%   True when \predref{unicode_skeleton}{2} of T1 and T2 are equal.
+
+%!  unicode_confusable(+T1, +T2, +Options) is semidet.
+%
+%   As \predref{unicode_confusable}{2}.  Options:
+%
+%   * ignore_intentional(+Bool)
+%     If `true`, skip the per-character substitution when the source
+%     and target form a pair listed in UTS #39 intentional.txt (e.g.
+%     Latin A versus Greek capital Alpha).  Default `false`.
+
+%!  unicode_resolved_scripts(+Text, -Scripts:list(atom)) is det.
+%
+%   Scripts is the UTS #39 §5.1 resolved augmented Script_Extensions
+%   set of Text: the intersection of `augscx(c)` over all
+%   non-Common/non-Inherited characters, with the augmentation rules
+%   for Han, Hiragana, Katakana, Hangul and Bopomofo applied.  The
+%   empty list signals a mixed-script string.
+
+%!  unicode_restriction_level(+Text, -Level:atom) is det.
+%
+%   Classify Text under UTS #39 §5.2 at the most restrictive level for
+%   which it qualifies.  Level is one of:
+%
+%   * `ascii_only` — every code point in U+0020..U+007E and Allowed.
+%   * `single_script` — augmented resolved-script-set non-empty and
+%     every code point Allowed.
+%   * `highly_restrictive` — covered by Latin plus one of `Hanb`,
+%     `Jpan` or `Kore` (UTS #39 §5.1 augmented profiles).
+%   * `moderately_restrictive` — covered by Latin plus a single
+%     non-Latin Recommended script (`Cyrl` or `Grek`).
+%   * `minimally_restrictive` — every code point has Identifier_Type
+%     in `{recommended, inclusion}`.
+%   * `unrestricted` — otherwise.
