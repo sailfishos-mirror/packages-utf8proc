@@ -90,7 +90,7 @@ Predicates fall into three groups:
 %!  unicode_identifier_status(+Code:integer, -Status:atom) is semidet.
 %
 %   Succeeds, unifying Status with `allowed`, when Code is listed in
-%   UTS #39 IdentifierStatus.txt with status `Allowed`.  Fails
+%   UTS #39 IdentifierStatus.txt with status ``Allowed``.  Fails
 %   otherwise — per UTS #39 every code point not listed there is
 %   Restricted by default; rather than return `restricted` for
 %   everything else, this predicate simply fails.
@@ -113,11 +113,11 @@ Predicates fall into three groups:
 
 %!  unicode_confusable(+T1, +T2) is semidet.
 %
-%   True when \predref{unicode_skeleton}{2} of T1 and T2 are equal.
+%   True when unicode_skeleton/2 of T1 and T2 are equal.
 
 %!  unicode_confusable(+T1, +T2, +Options) is semidet.
 %
-%   As \predref{unicode_confusable}{2}.  Options:
+%   As unicode_confusable/2.  Options:
 %
 %   * ignore_intentional(+Bool)
 %     If `true`, skip the per-character substitution when the source
@@ -140,10 +140,10 @@ Predicates fall into three groups:
 %   * `ascii_only` — every code point in U+0020..U+007E and Allowed.
 %   * `single_script` — augmented resolved-script-set non-empty and
 %     every code point Allowed.
-%   * `highly_restrictive` — covered by Latin plus one of `Hanb`,
-%     `Jpan` or `Kore` (UTS #39 §5.1 augmented profiles).
+%   * `highly_restrictive` — covered by Latin plus one of ``Hanb``,
+%     ``Jpan`` or ``Kore`` (UTS #39 §5.1 augmented profiles).
 %   * `moderately_restrictive` — covered by Latin plus a single
-%     non-Latin Recommended script (`Cyrl` or `Grek`).
+%     non-Latin Recommended script (``Cyrl`` or ``Grek``).
 %   * `minimally_restrictive` — every code point has Identifier_Type
 %     in `{recommended, inclusion}`.
 %   * `unrestricted` — otherwise.
