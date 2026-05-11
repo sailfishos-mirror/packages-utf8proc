@@ -28,3 +28,7 @@ utf8proc.tex
 *.log
 *.out
 *.pdf
+
+# UCD source files for etc/gen_uts39.pl — fetched on demand,
+# see data/README.md.
+data/*.txt
