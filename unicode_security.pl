@@ -80,15 +80,20 @@ Predicates fall into three groups:
 %   `han`, `common`, `inherited`, ...).  Fails for code points outside
 %   the Unicode range or with no entry in Scripts.txt.
 
-%!  unicode_script_extensions(+Code:integer, -Scripts:list(atom)) is det.
+%!  unicode_script_extensions(+Code:integer, -Scripts:list(atom)) is semidet.
 %
 %   Scripts is the sorted list of UAX #24 Script_Extensions of Code.
-%   For most code points this is a singleton `[Script]`.
+%   For most code points this is a singleton `[Script]`.  Fails for
+%   code points outside the Unicode range and for code points with no
+%   entry in either ScriptExtensions.txt or Scripts.txt.
 
-%!  unicode_identifier_status(+Code:integer, -Status:atom) is det.
+%!  unicode_identifier_status(+Code:integer, -Status:atom) is semidet.
 %
-%   Status is `allowed` if Code appears in UTS #39 IdentifierStatus.txt
-%   with status `Allowed`, else `restricted`.
+%   Succeeds, unifying Status with `allowed`, when Code is listed in
+%   UTS #39 IdentifierStatus.txt with status `Allowed`.  Fails
+%   otherwise — per UTS #39 every code point not listed there is
+%   Restricted by default; rather than return `restricted` for
+%   everything else, this predicate simply fails.
 
 %!  unicode_identifier_type(+Code:integer, -Types:list(atom)) is semidet.
 %

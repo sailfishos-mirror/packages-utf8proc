@@ -51,7 +51,6 @@ static atom_t *script_atom;            /* indexed by UTS39_SC_<short> */
 static atom_t *idtype_atom;            /* indexed by UTS39_IDTYPE_<TYPE> */
 
 static atom_t ATOM_allowed;
-static atom_t ATOM_restricted;
 
 static atom_t ATOM_ignore_intentional;
 static atom_t ATOM_true;
@@ -282,29 +281,49 @@ pl_unicode_script(term_t code, term_t script)
   return PL_unify_atom(script, script_atom[sid]);
 }
 
-/** unicode_script_extensions(+Code, -Scripts) is det. */
+/** unicode_script_extensions(+Code, -Scripts) is semidet.
+ *
+ * Fails for code points outside the Unicode range and for code points
+ * with no entry in either ScriptExtensions.txt or Scripts.txt
+ * (unassigned).  Code points listed in Scripts.txt but not in
+ * ScriptExtensions.txt resolve to a singleton `[Script]`.
+ */
 static foreign_t
 pl_unicode_script_extensions(term_t code, term_t scripts)
 { int cp;
   if ( !PL_get_integer_ex(code, &cp) ) return false;
-  if ( cp < 0 || cp > 0x10FFFF )
-    return PL_domain_error("unicode_codepoint", code);
+  if ( cp < 0 || cp > 0x10FFFF ) return false;
   uint64_t b[WORDS];
-  scx_of((uint32_t)cp, b);
+  int sx = range_lookup(uts39_scx_ranges,
+                        uts39_scx_ranges_count, (uint32_t)cp);
+  if ( sx >= 0 )
+  { bs_copy(b, uts39_scx_sets[sx]);
+  } else
+  { int s = range_lookup(uts39_script_ranges,
+                         uts39_script_ranges_count, (uint32_t)cp);
+    if ( s < 0 ) return false;
+    bs_zero(b);
+    bs_set(b, s);
+  }
   return unify_script_set(scripts, b);
 }
 
-/** unicode_identifier_status(+Code, -Status) is det. */
+/** unicode_identifier_status(+Code, -Status) is semidet.
+ *
+ * Succeeds when Code is listed as `Allowed` in
+ * UTS #39 IdentifierStatus.txt, unifying Status with `allowed`.
+ * Fails otherwise (out of Unicode range or not listed — per UTS #39
+ * the default for unlisted code points is Restricted).
+ */
 static foreign_t
 pl_unicode_identifier_status(term_t code, term_t status)
 { int cp;
   if ( !PL_get_integer_ex(code, &cp) ) return false;
-  if ( cp < 0 || cp > 0x10FFFF )
-    return PL_domain_error("unicode_codepoint", code);
+  if ( cp < 0 || cp > 0x10FFFF ) return false;
   int v = range_lookup(uts39_idstatus_ranges,
                         uts39_idstatus_ranges_count, cp);
-  return PL_unify_atom(status, v == UTS39_ID_ALLOWED ? ATOM_allowed
-                                                    : ATOM_restricted);
+  if ( v != UTS39_ID_ALLOWED ) return false;
+  return PL_unify_atom(status, ATOM_allowed);
 }
 
 /** unicode_identifier_type(+Code, -Types) is semidet.
@@ -735,7 +754,6 @@ install_unicode_security4pl(void)
   sc_Grek = find_script("Grek");
 
   ATOM_allowed    = PL_new_atom("allowed");
-  ATOM_restricted = PL_new_atom("restricted");
   ATOM_ignore_intentional = PL_new_atom("ignore_intentional");
   ATOM_true  = PL_new_atom("true");
   ATOM_false = PL_new_atom("false");

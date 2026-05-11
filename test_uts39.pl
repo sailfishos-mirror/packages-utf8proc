@@ -87,16 +87,24 @@ test(combining_grave) :-
     member(latin, Xs),
     member(cyrillic, Xs),
     member(greek, Xs).
+test(unassigned_fails, [fail]) :-
+    unicode_script_extensions(0xE0000, _).
+test(out_of_range_fails, [fail]) :-
+    unicode_script_extensions(0x110000, _).
 
 :- end_tests(uts39_script_extensions).
 
 :- begin_tests(uts39_identifier_status).
 
-test(latin_allowed)    :- unicode_identifier_status(0x0041, allowed).
-test(digit_allowed)    :- unicode_identifier_status(0x0030, allowed).
+test(latin_allowed)      :- unicode_identifier_status(0x0041, allowed).
+test(digit_allowed)      :- unicode_identifier_status(0x0030, allowed).
 test(underscore_allowed) :- unicode_identifier_status(0x005F, allowed).
-test(control_restricted) :- unicode_identifier_status(0x0001, restricted).
-test(dingbat_restricted) :- unicode_identifier_status(0x2701, restricted).
+test(control_fails, [fail]) :-
+    unicode_identifier_status(0x0001, _).      % not Allowed
+test(dingbat_fails, [fail]) :-
+    unicode_identifier_status(0x2701, _).
+test(out_of_range_fails, [fail]) :-
+    unicode_identifier_status(0x110000, _).
 
 :- end_tests(uts39_identifier_status).
 
