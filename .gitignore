@@ -32,3 +32,6 @@ utf8proc.tex
 # UCD source files for etc/gen_uts39.pl — fetched on demand,
 # see data/README.md.
 data/*.txt
+
+# Stray ctest scratch
+Testing/
