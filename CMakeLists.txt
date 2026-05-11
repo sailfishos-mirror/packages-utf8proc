@@ -72,16 +72,27 @@ swipl_plugin(
     C_LIBS PkgConfig::UTF8PROC
     PL_LIBS unicode.pl)
 
+swipl_plugin(
+    unicode_security
+    MODULE unicode_security4pl
+    C_SOURCES unicode_security4pl.c
+    C_LIBS PkgConfig::UTF8PROC
+    PL_LIBS unicode_security.pl)
+
 if(MINGW_ROOT)
 get_target_mingw_dlls(DirectDLLS plugin_unicode4pl)
 add_mingw_indirect_deps(DLLS ${DirectDLLS})
 install_dll(${DLLS})
+get_target_mingw_dlls(DirectDLLS_SEC plugin_unicode_security4pl)
+add_mingw_indirect_deps(DLLS_SEC ${DirectDLLS_SEC})
+install_dll(${DLLS_SEC})
 endif()
 
 pkg_doc(utf8proc
 	SECTION
-	    unicode.pl)
+	    unicode.pl
+	    unicode_security.pl)
 
-test_libs(utf8proc)
+test_libs(utf8proc uts39)
 
 endif()
