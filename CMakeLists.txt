@@ -75,9 +75,20 @@ swipl_plugin(
 swipl_plugin(
     unicode_security
     MODULE unicode_security4pl
-    C_SOURCES unicode_security4pl.c
+    C_SOURCES unicode_security4pl.c uts39_data.c
     C_LIBS PkgConfig::UTF8PROC
     PL_LIBS unicode_security.pl)
+
+# Regenerate uts39_data.{c,h} from the vendored UCD files under data/.
+# Not in the default build; the generated files are checked in.  Run as
+# `ninja regen-uts39` after a UCD version bump.  Listing BYPRODUCTS
+# would make every default build re-run this, which we don't want.
+add_custom_target(regen-uts39
+    COMMAND ${PROG_SWIPL} ${CMAKE_CURRENT_SOURCE_DIR}/etc/gen_uts39.pl
+            -- --ucd-dir ${CMAKE_CURRENT_SOURCE_DIR}/data
+               --out     ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Regenerating UTS #39 / UAX #24 tables"
+    VERBATIM)
 
 if(MINGW_ROOT)
 get_target_mingw_dlls(DirectDLLS plugin_unicode4pl)
