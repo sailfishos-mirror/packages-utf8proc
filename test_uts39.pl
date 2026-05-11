@@ -63,8 +63,12 @@ test(arab)      :- unicode_script(0x0627, arabic).
 test(common)    :- unicode_script(0x0020, common).
 test(common_d)  :- unicode_script(0x0030, common).
 test(inherited) :- unicode_script(0x0300, inherited).
-test(unassigned, [true(S == common)]) :-
-    unicode_script(0xE0000, S).      % unassigned/private use
+test(unassigned_fails, [fail]) :-
+    unicode_script(0xE0000, _).      % no entry in Scripts.txt
+test(out_of_range_fails, [fail]) :-
+    unicode_script(0x110000, _).
+test(negative_fails, [fail]) :-
+    unicode_script(-1, _).
 
 :- end_tests(uts39_script).
 
@@ -104,8 +108,10 @@ test(digit_recommended, [true(member(recommended, Ts))]) :-
     unicode_identifier_type(0x0030, Ts).
 test(middle_dot_inclusion, [true(member(inclusion, Ts))]) :-
     unicode_identifier_type(0x00B7, Ts).
-test(unassigned_no_types, [true(Ts == [])]) :-
-    unicode_identifier_type(0xE0000, Ts).
+test(unassigned_fails, [fail]) :-
+    unicode_identifier_type(0xE0000, _).
+test(out_of_range_fails, [fail]) :-
+    unicode_identifier_type(0x110000, _).
 
 :- end_tests(uts39_identifier_type).
 

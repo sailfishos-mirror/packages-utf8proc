@@ -73,12 +73,12 @@ Predicates fall into three groups:
     unicode_resolved_scripts/2, unicode_restriction_level/2.
 */
 
-%!  unicode_script(+Code:integer, -Script:atom) is det.
+%!  unicode_script(+Code:integer, -Script:atom) is semidet.
 %
 %   True when Script is the UAX #24 Script_Property of Code.  Script is
 %   a lower-case atom of the long property value (`latin`, `cyrillic`,
-%   `han`, `common`, `inherited`, ...).  Unassigned code points resolve
-%   to `common`.
+%   `han`, `common`, `inherited`, ...).  Fails for code points outside
+%   the Unicode range or with no entry in Scripts.txt.
 
 %!  unicode_script_extensions(+Code:integer, -Scripts:list(atom)) is det.
 %
@@ -90,13 +90,14 @@ Predicates fall into three groups:
 %   Status is `allowed` if Code appears in UTS #39 IdentifierStatus.txt
 %   with status `Allowed`, else `restricted`.
 
-%!  unicode_identifier_type(+Code:integer, -Types:list(atom)) is det.
+%!  unicode_identifier_type(+Code:integer, -Types:list(atom)) is semidet.
 %
 %   Types is the sorted list of UTS #39 Identifier_Type atoms for Code
 %   (`recommended`, `inclusion`, `technical`, `obsolete`,
 %   `limited_use`, `exclusion`, `not_nfkc`, `not_xid`,
-%   `default_ignorable`, `deprecated`, `uncommon_use`).  Code points
-%   not listed in IdentifierType.txt yield `[]`.
+%   `default_ignorable`, `deprecated`, `uncommon_use`).  Fails for
+%   code points outside the Unicode range or with no entry in
+%   IdentifierType.txt.
 
 %!  unicode_skeleton(+Text, -Skeleton:atom) is det.
 %

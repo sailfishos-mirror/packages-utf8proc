@@ -267,15 +267,18 @@ unify_script_set(term_t list, const uint64_t *b)
 		 *	PER-CP PREDICATES	*
 		 *******************************/
 
-/** unicode_script(+Code, -Script) is det. */
+/** unicode_script(+Code, -Script) is semidet.
+ *
+ * Fails for code points outside the Unicode range and for unassigned
+ * code points (no entry in Scripts.txt).
+ */
 static foreign_t
 pl_unicode_script(term_t code, term_t script)
 { int cp;
   if ( !PL_get_integer_ex(code, &cp) ) return false;
-  if ( cp < 0 || cp > 0x10FFFF )
-    return PL_domain_error("unicode_codepoint", code);
+  if ( cp < 0 || cp > 0x10FFFF ) return false;
   int sid = range_lookup(uts39_script_ranges, uts39_script_ranges_count, cp);
-  if ( sid < 0 ) sid = UTS39_SC_Zyyy;
+  if ( sid < 0 ) return false;
   return PL_unify_atom(script, script_atom[sid]);
 }
 
@@ -304,20 +307,20 @@ pl_unicode_identifier_status(term_t code, term_t status)
                                                     : ATOM_restricted);
 }
 
-/** unicode_identifier_type(+Code, -Types) is det.
+/** unicode_identifier_type(+Code, -Types) is semidet.
  *
- * Types is the sorted list of Identifier_Type atoms for Code.
- * Codepoints with no entry in IdentifierType.txt get an empty list.
+ * Types is the sorted list of Identifier_Type atoms for Code.  Fails
+ * for code points outside the Unicode range and for code points with
+ * no entry in IdentifierType.txt.
  */
 static foreign_t
 pl_unicode_identifier_type(term_t code, term_t types)
 { int cp;
   if ( !PL_get_integer_ex(code, &cp) ) return false;
-  if ( cp < 0 || cp > 0x10FFFF )
-    return PL_domain_error("unicode_codepoint", code);
+  if ( cp < 0 || cp > 0x10FFFF ) return false;
   int bits = range_lookup(uts39_idtype_ranges,
                             uts39_idtype_ranges_count, cp);
-  if ( bits < 0 ) bits = 0;
+  if ( bits < 0 ) return false;
   term_t tail = PL_copy_term_ref(types);
   term_t head = PL_new_term_ref();
   for(int i = 0; i < UTS39_IDTYPE_COUNT; i++)
