@@ -110,30 +110,18 @@ static const char *const idtype_short_names[UTS39_IDTYPE_COUNT] = {
 		 *	  RANGE LOOKUP		*
 		 *******************************/
 
-/* Binary search over a sorted, non-overlapping range table.  Each range
- * is [start, end] inclusive.  Returns the value field or -1 if cp is
- * not in any range.  Templated by hand for the two range types. */
+/* Binary search over a sorted, non-overlapping range table.  Each
+ * range covers `start .. start + len - 1`.  Returns the value field
+ * or -1 if cp is not in any range. */
 
 static int
-range16_lookup(const uts39_range16_t *r, size_t n, uint32_t cp)
+range_lookup(const uts39_range_t *r, size_t n, uint32_t cp)
 { size_t lo = 0, hi = n;
   while ( lo < hi )
   { size_t m = (lo + hi) >> 1;
-    if ( cp < r[m].start )      hi = m;
-    else if ( cp > r[m].end )   lo = m + 1;
-    else                        return r[m].value;
-  }
-  return -1;
-}
-
-static int
-range8_lookup(const uts39_range8_t *r, size_t n, uint32_t cp)
-{ size_t lo = 0, hi = n;
-  while ( lo < hi )
-  { size_t m = (lo + hi) >> 1;
-    if ( cp < r[m].start )      hi = m;
-    else if ( cp > r[m].end )   lo = m + 1;
-    else                        return r[m].value;
+    if ( cp < r[m].start )                  hi = m;
+    else if ( cp >= r[m].start + r[m].len ) lo = m + 1;
+    else                                    return r[m].value;
   }
   return -1;
 }
@@ -233,12 +221,12 @@ bs_popcount(const uint64_t *b)
 static void
 scx_of(uint32_t cp, uint64_t *out)
 { bs_zero(out);
-  int sx = range16_lookup(uts39_scx_ranges, uts39_scx_ranges_count, cp);
+  int sx = range_lookup(uts39_scx_ranges, uts39_scx_ranges_count, cp);
   if ( sx >= 0 )
   { bs_copy(out, uts39_scx_sets[sx]);
     return;
   }
-  int s = range16_lookup(uts39_script_ranges, uts39_script_ranges_count, cp);
+  int s = range_lookup(uts39_script_ranges, uts39_script_ranges_count, cp);
   if ( s < 0 ) s = UTS39_SC_Zyyy;
   bs_set(out, s);
 }
@@ -286,7 +274,7 @@ pl_unicode_script(term_t code, term_t script)
   if ( !PL_get_integer_ex(code, &cp) ) return false;
   if ( cp < 0 || cp > 0x10FFFF )
     return PL_domain_error("unicode_codepoint", code);
-  int sid = range16_lookup(uts39_script_ranges, uts39_script_ranges_count, cp);
+  int sid = range_lookup(uts39_script_ranges, uts39_script_ranges_count, cp);
   if ( sid < 0 ) sid = UTS39_SC_Zyyy;
   return PL_unify_atom(script, script_atom[sid]);
 }
@@ -310,7 +298,7 @@ pl_unicode_identifier_status(term_t code, term_t status)
   if ( !PL_get_integer_ex(code, &cp) ) return false;
   if ( cp < 0 || cp > 0x10FFFF )
     return PL_domain_error("unicode_codepoint", code);
-  int v = range8_lookup(uts39_idstatus_ranges,
+  int v = range_lookup(uts39_idstatus_ranges,
                         uts39_idstatus_ranges_count, cp);
   return PL_unify_atom(status, v == UTS39_ID_ALLOWED ? ATOM_allowed
                                                     : ATOM_restricted);
@@ -327,7 +315,7 @@ pl_unicode_identifier_type(term_t code, term_t types)
   if ( !PL_get_integer_ex(code, &cp) ) return false;
   if ( cp < 0 || cp > 0x10FFFF )
     return PL_domain_error("unicode_codepoint", code);
-  int bits = range16_lookup(uts39_idtype_ranges,
+  int bits = range_lookup(uts39_idtype_ranges,
                             uts39_idtype_ranges_count, cp);
   if ( bits < 0 ) bits = 0;
   term_t tail = PL_copy_term_ref(types);
@@ -644,11 +632,11 @@ classify_text(const uint8_t *text, size_t len, atom_t *level)
     if ( r < 0 ) return -1;
     if ( cp > 0x7F ) only_ascii = false;
 
-    int st = range8_lookup(uts39_idstatus_ranges,
+    int st = range_lookup(uts39_idstatus_ranges,
                            uts39_idstatus_ranges_count, (uint32_t)cp);
     if ( st != UTS39_ID_ALLOWED ) all_allowed = false;
 
-    int bits = range16_lookup(uts39_idtype_ranges,
+    int bits = range_lookup(uts39_idtype_ranges,
                               uts39_idtype_ranges_count, (uint32_t)cp);
     if ( bits < 0 ) bits = 0;
     if ( bits == 0 || (bits & ~allowed_types) != 0 )

@@ -481,21 +481,25 @@ emit_header(H) :-
     nl(H),
     NBits is (NScripts + 63) // 64,
     format(H, "#define UTS39_SCRIPT_BITSET_WORDS ~d~n~n", [NBits]),
-    format(H, "typedef struct { uint32_t start, end; uint16_t value; } uts39_range16_t;~n", []),
-    format(H, "typedef struct { uint32_t start, end; uint8_t  value; } uts39_range8_t;~n~n", []),
+    format(H, "/* A range covers start..start+len-1; value is the lookup payload */~n", []),
+    format(H, "typedef struct {~n", []),
+    format(H, "    uint32_t start;~n", []),
+    format(H, "    uint16_t len;~n", []),
+    format(H, "    uint16_t value;~n", []),
+    format(H, "} uts39_range_t;~n~n", []),
     % Tables
     format(H, "extern const char *const uts39_script_short[UTS39_SCRIPT_COUNT];~n", []),
     format(H, "extern const char *const uts39_script_long [UTS39_SCRIPT_COUNT];~n~n", []),
-    format(H, "extern const uts39_range16_t uts39_script_ranges[];~n", []),
-    format(H, "extern const size_t          uts39_script_ranges_count;~n~n", []),
-    format(H, "extern const uts39_range16_t uts39_scx_ranges[];~n", []),
-    format(H, "extern const size_t          uts39_scx_ranges_count;~n", []),
-    format(H, "extern const uint64_t        uts39_scx_sets[][UTS39_SCRIPT_BITSET_WORDS];~n", []),
-    format(H, "extern const size_t          uts39_scx_sets_count;~n~n", []),
-    format(H, "extern const uts39_range8_t  uts39_idstatus_ranges[];~n", []),
-    format(H, "extern const size_t          uts39_idstatus_ranges_count;~n~n", []),
-    format(H, "extern const uts39_range16_t uts39_idtype_ranges[];~n", []),
-    format(H, "extern const size_t          uts39_idtype_ranges_count;~n~n", []),
+    format(H, "extern const uts39_range_t uts39_script_ranges[];~n", []),
+    format(H, "extern const size_t        uts39_script_ranges_count;~n~n", []),
+    format(H, "extern const uts39_range_t uts39_scx_ranges[];~n", []),
+    format(H, "extern const size_t        uts39_scx_ranges_count;~n", []),
+    format(H, "extern const uint64_t      uts39_scx_sets[][UTS39_SCRIPT_BITSET_WORDS];~n", []),
+    format(H, "extern const size_t        uts39_scx_sets_count;~n~n", []),
+    format(H, "extern const uts39_range_t uts39_idstatus_ranges[];~n", []),
+    format(H, "extern const size_t        uts39_idstatus_ranges_count;~n~n", []),
+    format(H, "extern const uts39_range_t uts39_idtype_ranges[];~n", []),
+    format(H, "extern const size_t        uts39_idtype_ranges_count;~n~n", []),
     format(H, "typedef struct {~n", []),
     format(H, "    uint32_t src;~n", []),
     format(H, "    uint32_t offset;~n", []),
@@ -540,13 +544,34 @@ emit_script_ranges(C) :-
     sort(R0, R1),
     maplist([S-E-Short, S-E-Id]>>script_id(Short, Id), R1, R2),
     coalesce(R2, R3),
-    length(R3, N),
+    split_oversize(R3, R4),
+    length(R4, N),
     format(C, "const size_t uts39_script_ranges_count = ~d;~n", [N]),
-    format(C, "const uts39_range16_t uts39_script_ranges[] = {~n", []),
-    forall(member(S-E-Id, R3),
-           format(C, "    { 0x~|~`0t~16r~6+, 0x~|~`0t~16r~6+, ~d },~n",
-                  [S, E, Id])),
+    format(C, "const uts39_range_t uts39_script_ranges[] = {~n", []),
+    forall(member(S-E-Id, R4),
+           emit_range(C, S, E, Id)),
     format(C, "};~n~n", []).
+
+%! split_oversize(+Ranges, -Out)
+%
+%   Break any S-E-V whose length exceeds 65535 into smaller pieces, so
+%   the generated table's len field fits a uint16_t.
+
+split_oversize([], []).
+split_oversize([S-E-V|T], Out) :-
+    Len is E - S + 1,
+    (   Len =< 0xFFFF
+    ->  Out = [S-E-V|R],
+        split_oversize(T, R)
+    ;   E1 is S + 0xFFFF - 1,
+        S1 is E1 + 1,
+        Out = [S-E1-V|R],
+        split_oversize([S1-E-V|T], R)
+    ).
+
+emit_range(C, S, E, V) :-
+    Len is E - S + 1,
+    format(C, "    { 0x~|~`0t~16r~6+, ~|~t~d~5+, ~d },~n", [S, Len, V]).
 
 emit_scx(C) :-
     % Build vocabulary of script-id sets from raw_scx
@@ -562,7 +587,8 @@ emit_scx(C) :-
             R0),
     sort(R0, R1),
     coalesce(R1, R2),
-    length(R2, NRanges),
+    split_oversize(R2, R3),
+    length(R3, NRanges),
     % Emit the unique bitsets
     nscripts(NScripts),
     NBits is (NScripts + 63) // 64,
@@ -572,10 +598,9 @@ emit_scx(C) :-
            emit_bitset(C, I, Ids, NBits)),
     format(C, "};~n~n", []),
     format(C, "const size_t uts39_scx_ranges_count = ~d;~n", [NRanges]),
-    format(C, "const uts39_range16_t uts39_scx_ranges[] = {~n", []),
-    forall(member(S-E-Idx, R2),
-           format(C, "    { 0x~|~`0t~16r~6+, 0x~|~`0t~16r~6+, ~d },~n",
-                  [S, E, Idx])),
+    format(C, "const uts39_range_t uts39_scx_ranges[] = {~n", []),
+    forall(member(S-E-Idx, R3),
+           emit_range(C, S, E, Idx)),
     format(C, "};~n~n", []).
 
 nscripts(N) :-
@@ -614,12 +639,12 @@ emit_idstatus(C) :-
     sort(R0, R1),
     maplist([S-E-_, S-E-1]>>true, R1, R2),
     coalesce(R2, R3),
-    length(R3, N),
+    split_oversize(R3, R4),
+    length(R4, N),
     format(C, "const size_t uts39_idstatus_ranges_count = ~d;~n", [N]),
-    format(C, "const uts39_range8_t uts39_idstatus_ranges[] = {~n", []),
-    forall(member(S-E-V, R3),
-           format(C, "    { 0x~|~`0t~16r~6+, 0x~|~`0t~16r~6+, ~d },~n",
-                  [S, E, V])),
+    format(C, "const uts39_range_t uts39_idstatus_ranges[] = {~n", []),
+    forall(member(S-E-V, R4),
+           emit_range(C, S, E, V)),
     format(C, "};~n~n", []).
 
 emit_idtype(C) :-
@@ -630,12 +655,12 @@ emit_idtype(C) :-
             R0),
     sort(R0, R1),
     coalesce(R1, R2),
-    length(R2, N),
+    split_oversize(R2, R3),
+    length(R3, N),
     format(C, "const size_t uts39_idtype_ranges_count = ~d;~n", [N]),
-    format(C, "const uts39_range16_t uts39_idtype_ranges[] = {~n", []),
-    forall(member(S-E-V, R2),
-           format(C, "    { 0x~|~`0t~16r~6+, 0x~|~`0t~16r~6+, 0x~|~`0t~16r~4+ },~n",
-                  [S, E, V])),
+    format(C, "const uts39_range_t uts39_idtype_ranges[] = {~n", []),
+    forall(member(S-E-V, R3),
+           emit_range(C, S, E, V)),
     format(C, "};~n~n", []).
 
 emit_skeleton(C) :-

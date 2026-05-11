@@ -224,25 +224,29 @@ typedef enum {
 
 #define UTS39_SCRIPT_BITSET_WORDS 3
 
-typedef struct { uint32_t start, end; uint16_t value; } uts39_range16_t;
-typedef struct { uint32_t start, end; uint8_t  value; } uts39_range8_t;
+/* A range covers start..start+len-1; value is the lookup payload */
+typedef struct {
+    uint32_t start;
+    uint16_t len;
+    uint16_t value;
+} uts39_range_t;
 
 extern const char *const uts39_script_short[UTS39_SCRIPT_COUNT];
 extern const char *const uts39_script_long [UTS39_SCRIPT_COUNT];
 
-extern const uts39_range16_t uts39_script_ranges[];
-extern const size_t          uts39_script_ranges_count;
+extern const uts39_range_t uts39_script_ranges[];
+extern const size_t        uts39_script_ranges_count;
 
-extern const uts39_range16_t uts39_scx_ranges[];
-extern const size_t          uts39_scx_ranges_count;
-extern const uint64_t        uts39_scx_sets[][UTS39_SCRIPT_BITSET_WORDS];
-extern const size_t          uts39_scx_sets_count;
+extern const uts39_range_t uts39_scx_ranges[];
+extern const size_t        uts39_scx_ranges_count;
+extern const uint64_t      uts39_scx_sets[][UTS39_SCRIPT_BITSET_WORDS];
+extern const size_t        uts39_scx_sets_count;
 
-extern const uts39_range8_t  uts39_idstatus_ranges[];
-extern const size_t          uts39_idstatus_ranges_count;
+extern const uts39_range_t uts39_idstatus_ranges[];
+extern const size_t        uts39_idstatus_ranges_count;
 
-extern const uts39_range16_t uts39_idtype_ranges[];
-extern const size_t          uts39_idtype_ranges_count;
+extern const uts39_range_t uts39_idtype_ranges[];
+extern const size_t        uts39_idtype_ranges_count;
 
 typedef struct {
     uint32_t src;
