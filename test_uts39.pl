@@ -204,30 +204,33 @@ test(empty_is_ascii_only)   :- unicode_restriction_level("", ascii_only).
 
 :- end_tests(uts39_restriction_level).
 
+:- use_module(library(check), [list_confusable_identifiers/0]).
 :- use_module(confusable_demo).      % loaded at test-file load time
 
-:- dynamic captured_check_msg/1.
+:- dynamic captured_check_term/1.
 
-%   Capture `print_message(warning, check(K, _))` calls emitted by
-%   Goal, returning the sorted list of distinct K values.  Both the
-%   dynamic store and this helper live in the test_uts39 module so
-%   the asserted clause's body references the same predicate as the
+%   Capture `print_message(warning, check(...))` terms emitted by Goal,
+%   returning the sorted list of distinct functors.  Both the dynamic
+%   store and this helper live in the test_uts39 module so the
+%   asserted clause's body references the same predicate as the
 %   findall/3 below it.
-capture_check_msgs(Goal, Kinds) :-
-    retractall(captured_check_msg(_)),
-    asserta((user:message_hook(check(K, _), warning, _) :-
-                 assertz(test_uts39:captured_check_msg(K))),
+capture_check_msgs(Goal, Functors) :-
+    retractall(captured_check_term(_)),
+    asserta((user:message_hook(check(Term), warning, _) :-
+                 assertz(test_uts39:captured_check_term(Term))),
             Ref),
     setup_call_cleanup(true, ignore(Goal), erase(Ref)),
-    findall(K, captured_check_msg(K), Kinds0),
-    retractall(captured_check_msg(_)),
-    sort(Kinds0, Kinds).
+    findall(F,
+            ( captured_check_term(T), functor(T, F, _) ),
+            Functors0),
+    retractall(captured_check_term(_)),
+    sort(Functors0, Functors).
 
 :- begin_tests(uts39_check_integration).
 
 test(linter_reports_collision_and_mixed_script) :-
-    test_uts39:capture_check_msgs(list_confusable_identifiers, Kinds),
-    memberchk(mixed_script_identifiers,        Kinds),
-    memberchk(confusable_identifier_collision, Kinds).
+    test_uts39:capture_check_msgs(list_confusable_identifiers, Functors),
+    memberchk(mixed_script_identifier,        Functors),
+    memberchk(confusable_identifier_collision, Functors).
 
 :- end_tests(uts39_check_integration).

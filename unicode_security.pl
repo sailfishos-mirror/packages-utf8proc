@@ -43,22 +43,9 @@
             unicode_confusable/3,         % +T1, +T2, +Options
 
             unicode_resolved_scripts/2,   % +Text, -Scripts
-            unicode_restriction_level/2,  % +Text, -Level
-
-            list_confusable_identifiers/0,
-            list_confusable_identifiers/1 % +Options
+            unicode_restriction_level/2   % +Text, -Level
           ]).
 :- use_foreign_library(foreign(unicode_security4pl)).
-:- use_module(library(option),  [option/3]).
-:- use_module(library(pairs),   [group_pairs_by_key/2]).
-:- use_module(library(lists),   [member/2]).
-
-:- multifile
-    check:checker/2,
-    prolog:message/3.
-
-check:checker(unicode_security:list_confusable_identifiers,
-              'confusable identifier names (UTS #39)').
 
 /** <module> Unicode security helpers (UTS #39, UAX #24)
 
@@ -160,106 +147,8 @@ Predicates fall into three groups:
 %   * `minimally_restrictive` — every code point has Identifier_Type
 %     in `{recommended, inclusion}`.
 %   * `unrestricted` — otherwise.
-
-
-		 /*******************************
-		 *     library(check) hook	*
-		 *******************************/
-
-%!  list_confusable_identifiers is det.
-%!  list_confusable_identifiers(+Options) is det.
 %
-%   Report predicate names with UTS #39 confusability concerns.
-%   Walks the predicates of every loaded module whose class is in
-%   `Options`'s `module_class` list (default `[user]`) and emits
-%   warnings for:
-%
-%   * **Mixed-script names**: predicates whose name has a
-%     unicode_restriction_level/2 worse than `single_script`.
-%   * **Skeleton collisions**: distinct predicate names whose
-%     unicode_skeleton/2 are identical — two look-alike identifiers
-%     in the same program.
-%
-%   This predicate is also registered as a `library(check)` checker
-%   via the multifile check:checker/2, so it runs as part of plain
-%   check/0.
-
-list_confusable_identifiers :-
-    list_confusable_identifiers([]).
-
-list_confusable_identifiers(Options) :-
-    option(module_class(Classes), Options, [user]),
-    collect_user_predicate_names(Classes, Names),
-    report_mixed_script(Names),
-    report_skeleton_collisions(Names).
-
-collect_user_predicate_names(Classes, Names) :-
-    findall(M:Name,
-            ( current_predicate(M:Name/Arity),
-              functor(Head, Name, Arity),
-              \+ predicate_property(M:Head, imported_from(_)),
-              \+ predicate_property(M:Head, foreign),
-              \+ sub_atom(Name, 0, 1, _, '$'),
-              module_property(M, class(Class)),
-              memberchk(Class, Classes) ),
-            All),
-    sort(All, Names).
-
-report_mixed_script(Names) :-
-    findall(M:Name-Level,
-            ( member(M:Name, Names),
-              unicode_restriction_level(Name, Level),
-              \+ memberchk(Level, [ascii_only, single_script]) ),
-            Mixed),
-    (   Mixed == [] -> true
-    ;   print_message(warning,
-                      check(mixed_script_identifiers, Mixed))
-    ).
-
-report_skeleton_collisions(Names) :-
-    findall(Skel-(M:Name),
-            ( member(M:Name, Names),
-              unicode_skeleton(Name, Skel) ),
-            Pairs0),
-    keysort(Pairs0, Pairs),
-    group_pairs_by_key(Pairs, Grouped),
-    findall(Members,
-            ( member(_-Members, Grouped),
-              has_distinct_names(Members) ),
-            Collisions),
-    (   Collisions == [] -> true
-    ;   print_message(warning,
-                      check(confusable_identifier_collision, Collisions))
-    ).
-
-has_distinct_names(Members) :-
-    findall(Name, member(_:Name, Members), Names),
-    sort(Names, [_,_|_]).
-
-prolog:message(check(mixed_script_identifiers, List)) -->
-    [ 'Predicate names with a UTS #39 restriction level worse than'-[], nl,
-      'single_script (possible mixed-script identifiers):'-[], nl, nl
-    ],
-    mixed_script_lines(List).
-
-mixed_script_lines([]) --> [].
-mixed_script_lines([M:N-L | T]) -->
-    [ '    ~w:~q  (~w)'-[M, N, L], nl ],
-    mixed_script_lines(T).
-
-prolog:message(check(confusable_identifier_collision, Groups)) -->
-    [ 'Distinct predicate names with equal UTS #39 skeletons'-[], nl,
-      '(possible look-alike collision):'-[], nl, nl
-    ],
-    collision_groups(Groups).
-
-collision_groups([]) --> [].
-collision_groups([Group | T]) -->
-    collision_group(Group),
-    [ nl ],
-    collision_groups(T).
-
-collision_group([]) --> [].
-collision_group([M:N | T]) -->
-    [ '    ~w:~q'-[M, N], nl ],
-    collision_group(T).
+%   A linter that walks source clauses and reports atoms with the
+%   confusability issues above is registered in `library(check)`
+%   itself (predicate `list_confusable_identifiers/0`); see the
+%   `library(check)` documentation for details.
