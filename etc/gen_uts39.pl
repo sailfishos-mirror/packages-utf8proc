@@ -110,6 +110,7 @@ setup(UCD) :-
     retractall(raw_intentional(_,_)),
     retractall(unicode_version(_)),
     load_aliases(UCD),
+    load_synthetic_aliases,
     load_scripts(UCD),
     load_scx(UCD),
     load_idstatus(UCD),
@@ -118,6 +119,18 @@ setup(UCD) :-
     load_intentional(UCD),
     assign_script_ids,
     detect_version(UCD).
+
+% UTS #39 augmented-script-only codes (ISO 15924).  These don't appear
+% in PropertyValueAliases.txt as `sc` lines because no single character
+% has them as its primary script, but they are referenced by the §5.1
+% augmentation rules.  Long names follow ISO 15924.
+load_synthetic_aliases :-
+    forall(member(Short-Long,
+                  [ 'Hanb'-'Han_With_Bopomofo',
+                    'Jpan'-'Japanese',
+                    'Kore'-'Korean'
+                  ]),
+           ensure_script_known(Short, Long)).
 
 detect_version(UCD) :-
     directory_file_path(UCD, 'confusables.txt', Path),

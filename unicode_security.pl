@@ -33,7 +33,17 @@
 */
 
 :- module(unicode_security,
-          [
+          [ unicode_script/2,             % +Code, -Script
+            unicode_script_extensions/2,  % +Code, -Scripts
+            unicode_identifier_status/2,  % +Code, -Status
+            unicode_identifier_type/2,    % +Code, -Types
+
+            unicode_skeleton/2,           % +Text, -Skeleton
+            unicode_confusable/2,         % +T1, +T2
+            unicode_confusable/3,         % +T1, +T2, +Options
+
+            unicode_resolved_scripts/2,   % +Text, -Scripts
+            unicode_restriction_level/2   % +Text, -Level
           ]).
 :- use_foreign_library(foreign(unicode_security4pl)).
 
