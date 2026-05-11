@@ -207,13 +207,6 @@ bs_empty(const uint64_t *b)
   return true;
 }
 
-static inline int
-bs_popcount(const uint64_t *b)
-{ int c = 0;
-  for(size_t i=0; i<WORDS; i++) c += __builtin_popcountll(b[i]);
-  return c;
-}
-
 /* Fill `out` with the (un-augmented) Script_Extensions of cp.
  * For codepoints without an explicit scx entry, the set is {sc(cp)}.
  * For unassigned codepoints, the set is {Common}. */
