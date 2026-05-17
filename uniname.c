@@ -14,7 +14,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "uniname_data.h"
+#include "uniname.h"
 
 /* --- Hangul algorithmic names (Unicode 3.12) ------------------------- */
 
@@ -141,6 +141,120 @@ uniname_get(uint32_t cp, char *buf, size_t buflen)
     }
     while ( *p ) leb_get(&p);    /* skip this name's tokens */
     p++;                          /* skip 0 terminator       */
+  }
+  return 0;
+}
+
+/* --- public: name -> code point ------------------------------------- */
+
+/* Reverse lookup.  Linear scan of the explicit-name stream plus a
+ * structural check of the algorithmic ranges.  Returns 1 and sets *cp
+ * on success, 0 otherwise.  Unicode names are unique, so this is
+ * semidet.
+ */
+int
+uniname_lookup(const char *name, uint32_t *cp)
+{ char buf[256];
+
+  /* Algorithmic ranges. */
+  for (unsigned i = 0; i < UNINAME_RANGE_COUNT; i++)
+  { const uniname_range_t *r = &uniname_ranges[i];
+    if ( r->kind == UNINAME_K_HEX )
+    { const char *pfx = str_at(uniname_prefixes, r->prefix);
+      size_t pl = strlen(pfx);
+      if ( strncmp(name, pfx, pl) == 0 && name[pl] == '-' )
+      { char *e;
+        unsigned long v = strtoul(name + pl + 1, &e, 16);
+        if ( *e == '\0' && v >= r->start && v <= r->end )
+        { snprintf(buf, sizeof buf, "%s-%04lX", pfx, v);
+          if ( strcmp(buf, name) == 0 ) { *cp = (uint32_t)v; return 1; }
+        }
+      }
+    } else /* UNINAME_K_HANGUL: brute the 11k block (reverse is rare) */
+    { if ( strncmp(name, "HANGUL SYLLABLE ", 16) == 0 )
+      { for (uint32_t c = r->start; c <= r->end; c++)
+        { uniname_get(c, buf, sizeof buf);
+          if ( strcmp(buf, name) == 0 ) { *cp = c; return 1; }
+        }
+      }
+    }
+  }
+
+  /* Explicit, tokenised names. */
+  { const uint8_t *p = uniname_names;
+    const uint8_t *end = uniname_names + UNINAME_NAMES_LEN;
+    uint32_t cur = 0;
+    if ( !word_ptr_ready ) build_word_index();
+    while ( p < end )
+    { cur += leb_get(&p);
+      size_t n = 0;
+      int first = 1;
+      while ( *p )
+      { uint32_t id = leb_get(&p) - 1;
+        const char *w = word_ptr[id];
+        size_t wl = strlen(w);
+        if ( !first ) buf[n++] = ' ';
+        first = 0;
+        memcpy(buf + n, w, wl); n += wl;
+      }
+      buf[n] = '\0';
+      p++;
+      if ( strcmp(buf, name) == 0 ) { *cp = cur; return 1; }
+    }
+  }
+  return 0;
+}
+
+/* --- public: enumeration ------------------------------------------- */
+
+/* Stateful iterator over every named code point.  Phase 0 walks the
+ * explicit-name stream (ascending cp); phase 1 expands the algorithmic
+ * ranges.  uniname_iter_next() returns 1 with *cp and the name in buf,
+ * or 0 when exhausted.
+ */
+void
+uniname_iter_init(uniname_iter *it)
+{ it->p = uniname_names;
+  it->cur = 0;
+  it->ri = 0;
+  it->rc = UNINAME_RANGE_COUNT ? uniname_ranges[0].start : 0;
+  it->phase = 0;
+}
+
+int
+uniname_iter_next(uniname_iter *it, uint32_t *cp, char *buf, size_t buflen)
+{ if ( it->phase == 0 )
+  { const uint8_t *end = uniname_names + UNINAME_NAMES_LEN;
+    if ( it->p < end )
+    { if ( !word_ptr_ready ) build_word_index();
+      it->cur += leb_get(&it->p);
+      size_t n = 0;
+      int first = 1;
+      while ( *it->p )
+      { uint32_t id = leb_get(&it->p) - 1;
+        const char *w = word_ptr[id];
+        size_t wl = strlen(w);
+        if ( !first && n + 1 < buflen ) buf[n++] = ' ';
+        first = 0;
+        if ( n + wl < buflen ) { memcpy(buf + n, w, wl); n += wl; }
+      }
+      buf[n] = '\0';
+      it->p++;
+      *cp = it->cur;
+      return 1;
+    }
+    it->phase = 1;
+  }
+  while ( it->ri < UNINAME_RANGE_COUNT )
+  { const uniname_range_t *r = &uniname_ranges[it->ri];
+    if ( it->rc <= r->end )
+    { uint32_t c = it->rc++;
+      uniname_get(c, buf, buflen);
+      *cp = c;
+      return 1;
+    }
+    if ( ++it->ri < UNINAME_RANGE_COUNT )
+      it->rc = uniname_ranges[it->ri].start;
   }
   return 0;
 }

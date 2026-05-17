@@ -79,6 +79,12 @@ swipl_plugin(
     C_LIBS PkgConfig::UTF8PROC
     PL_LIBS unicode_security.pl)
 
+swipl_plugin(
+    uniname
+    MODULE uniname4pl
+    C_SOURCES uniname4pl.c uniname.c uniname_data.c
+    PL_LIBS uniname.pl)
+
 # Regenerate uts39_data.{c,h} from the vendored UCD files under data/.
 # Not in the default build; the generated files are checked in.  Run as
 # `ninja regen-uts39` after a UCD version bump.  Listing BYPRODUCTS
@@ -113,8 +119,9 @@ endif()
 pkg_doc(utf8proc
 	SECTION
 	    unicode.pl
-	    unicode_security.pl)
+	    unicode_security.pl
+	    uniname.pl)
 
-test_libs(utf8proc uts39)
+test_libs(utf8proc uts39 uniname)
 
 endif()
