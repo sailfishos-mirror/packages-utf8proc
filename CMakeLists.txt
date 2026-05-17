@@ -90,6 +90,17 @@ add_custom_target(regen-uts39
     COMMENT "Regenerating UTS #39 / UAX #24 tables"
     VERBATIM)
 
+# Regenerate the compact Unicode name table (uniname_data.{c,h}) from
+# data/UnicodeData.txt.  Prototype; not yet compiled into a plugin.
+# Run as `ninja regen-uniname` after a UCD version bump.
+add_custom_target(regen-uniname
+    COMMAND ${PROG_SWIPL} ${CMAKE_CURRENT_SOURCE_DIR}/etc/gen_uniname.pl
+            -- --ucd-dir ${CMAKE_CURRENT_SOURCE_DIR}/data
+               --out     ${CMAKE_CURRENT_SOURCE_DIR}
+               --version 17.0.0
+    COMMENT "Regenerating compact Unicode name table"
+    VERBATIM)
+
 if(MINGW_ROOT)
 get_target_mingw_dlls(DirectDLLS plugin_unicode4pl)
 add_mingw_indirect_deps(DLLS ${DirectDLLS})
