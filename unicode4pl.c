@@ -661,10 +661,11 @@ unicode_codepoint_valid(term_t code)
 
 /* Kernel atom-normalisation callback.  Registered with
  * PL_atom_normalize_hook in install_unicode4pl().  Performs NFC
- * normalisation on UTF-8 in place: the NFC result is always shorter
- * than or equal to the input, so the result fits in the original
- * buffer.  On return *len holds the new byte length.  Returns 0 on
- * success, -1 on error.
+ * normalisation on UTF-8 in place.  On return *len holds the new byte
+ * length.  Returns 0 on success, -1 on error.  The NFC result may be
+ * longer than the input, e.g., for composition exclusions such as
+ * U+0958 that decompose under NFC.  As we cannot write a longer result
+ * in place, this is reported as an error.
  */
 static int
 utf8proc_normalize_cb(unsigned char *in, size_t *len)
@@ -676,10 +677,13 @@ utf8proc_normalize_cb(unsigned char *in, size_t *len)
   if ( out_len < 0 )
     return -1;
 
+  if ( (size_t)out_len > *len )
+  { free(result);
+    return -1;
+  }
   if ( (size_t)out_len != *len ||
        memcmp(result, in, (size_t)out_len) != 0 )
-  { assert((size_t)out_len <= *len);
-    memcpy(in, result, (size_t)out_len);
+  { memcpy(in, result, (size_t)out_len);
     *len = (size_t)out_len;
   }
   free(result);

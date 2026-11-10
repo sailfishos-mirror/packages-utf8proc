@@ -212,6 +212,16 @@ test(bidi_via_escape_is_allowed) :-
     read_term_from_atom(A, T, []),
     atom_codes(T, [0'a, 0x202E, 0'b]).
 
+% NFC of U+0958 is longer than its UTF-8 input (composition exclusion).
+% This used to abort the process.
+test(read_term_nfc_growing) :-
+    atom_codes(Text, [0x958, 0x958]),
+    read_term_from_atom(Text, T, [unicode_atoms(nfc)]),
+    atom(T).
+test(read_term_error_growing, [error(syntax_error(non_nfc_atom))]) :-
+    atom_codes(Text, [0x958, 0x301]),   % combining mark: consult the hook
+    read_term_from_atom(Text, _, [unicode_atoms(error)]).
+
 :- end_tests(utf8proc_unicode_atoms).
 
 
