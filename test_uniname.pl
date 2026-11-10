@@ -98,6 +98,9 @@ test(reverse_is_semidet) :-
 test(string_accepted, C == 0x20AC) :-
     unicode_name(C, "EURO SIGN").
 
+test(embedded_nul, fail) :-
+    unicode_name(_, "LATIN CAPITAL LETTER A\u0000junk").
+
 :- end_tests(uniname_reverse).
 
 :- begin_tests(uniname_check).

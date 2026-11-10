@@ -140,6 +140,12 @@ static pmap bidi_map[] =
   BIDI(S),
   BIDI(WS),
   BIDI(ON),
+#ifdef HAVE_UTF8PROC_BIDI_CLASS_LRI
+  BIDI(LRI),
+  BIDI(RLI),
+  BIDI(FSI),
+  BIDI(PDI),
+#endif
   { 0 }
 };
 
@@ -228,14 +234,14 @@ unify_symbol(term_t arg, int code, pmap *map, size_t size)
      )
     return false;
 
-  if ( code < size && map[code].code == code )
+  if ( code < size && map[code].code == code && map[code].name )
   { m = &map[code];
   } else
-  { m = map;
-    pmap *end = &m[size];
-    for(; map < end && m->code != code; m++)
+  { pmap *end = &map[size];
+
+    for(m = map; m < end && m->code != code; m++)
       ;
-    if ( map == end || !m->name )
+    if ( m == end || !m->name )
       return false;
   }
 
@@ -443,7 +449,7 @@ unicode_map(term_t in, term_t out, term_t options)
   if ( len_in == 0 )			/* empty atom */
     return PL_unify_chars(out, PL_ATOM, 0, utf8_in);
   len_out = utf8proc_map((uint8_t*)utf8_in, len_in, &utf8_out, mask);
-  if ( len_out > 0 )
+  if ( len_out >= 0 )			/* 0: e.g., all input is ignored */
   { bool rc;
 
     rc = PL_unify_chars(out, PL_ATOM|REP_UTF8, len_out, (char*)utf8_out);
@@ -461,8 +467,7 @@ unicode_map(term_t in, term_t out, term_t options)
       case UTF8PROC_ERROR_INVALIDOPTS:
 	return PL_domain_error("unicode_map_options", options);
       default:
-	assert(0);
-	return false;
+	return PL_domain_error("unicode_string", in);
     }
   }
 }

@@ -50,6 +50,10 @@ check_c_source_compiles("
 #include <utf8proc.h>
 int main(void) { return UTF8PROC_BOUNDCLASS_EXTENDED_PICTOGRAPHIC; }
 " HAVE_UTF8PROC_BOUNDCLASS_EXTENDED_PICTOGRAPHIC)
+check_c_source_compiles("
+#include <utf8proc.h>
+int main(void) { return UTF8PROC_BIDI_CLASS_LRI; }
+" HAVE_UTF8PROC_BIDI_CLASS_LRI)
 
 # Functions.
 check_symbol_exists(utf8proc_unicode_version utf8proc.h

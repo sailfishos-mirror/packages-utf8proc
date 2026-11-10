@@ -347,6 +347,12 @@ test(backtrack_properties) :-
 test(out_of_range, error(domain_error(code, _))) :-
     unicode_property(0x200000, category(_)).
 
+% Bidi isolate classes; the lookup used to read beyond the class table.
+test(bidi_isolates, Classes == [lri, rli, fsi, pdi]) :-
+    findall(C, ( member(Code, [0x2066, 0x2067, 0x2068, 0x2069]),
+                 unicode_property(Code, bidi_class(C))
+               ), Classes).
+
 :- end_tests(utf8proc_property).
 
 
@@ -390,6 +396,10 @@ test(charbound_cafe_acute) :-
     % One 0xFF before each grapheme cluster.
     aggregate_all(count, member(0xFF, Codes), N),
     N == 2.
+
+% An empty result used to trigger an assertion.
+test(map_empty, X == '') :-
+    unicode_map('\u00AD', X, [ignore]).
 
 :- end_tests(utf8proc_map).
 

@@ -80,7 +80,7 @@ pl_unicode_name(term_t code, term_t name, control_t h)
                             CVT_ATOM|CVT_STRING|CVT_LIST|
                             REP_UTF8|CVT_EXCEPTION) )
           return false;
-        if ( !uniname_lookup(s, &cp) )
+        if ( strlen(s) != len || !uniname_lookup(s, &cp) )
           return false;
         return PL_unify_integer(code, (int)cp);
       }
