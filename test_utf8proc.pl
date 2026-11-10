@@ -214,12 +214,22 @@ test(bidi_via_escape_is_allowed) :-
 
 % NFC of U+0958 is longer than its UTF-8 input (composition exclusion).
 % This used to abort the process.
-test(read_term_nfc_growing) :-
+test(read_term_nfc_growing, Codes == [0x915, 0x93C, 0x915, 0x93C]) :-
     atom_codes(Text, [0x958, 0x958]),
     read_term_from_atom(Text, T, [unicode_atoms(nfc)]),
-    atom(T).
+    atom_codes(T, Codes).
+test(read_term_nfc_growing_long, Len == 400) :-
+    length(Codes, 200),                 % 600 bytes; result 1200
+    maplist(=(0x958), Codes),
+    atom_codes(Text, Codes),
+    read_term_from_atom(Text, T, [unicode_atoms(nfc)]),
+    atom_length(T, Len).
+test(read_term_nfc_shrinking, Codes == [0'a, 0x3A9]) :-
+    atom_codes(Text, [0'a, 0x2126]),    % OHM SIGN -> GREEK CAPITAL OMEGA
+    read_term_from_atom(Text, T, [unicode_atoms(nfc)]),
+    atom_codes(T, Codes).
 test(read_term_error_growing, [error(syntax_error(non_nfc_atom))]) :-
-    atom_codes(Text, [0x958, 0x301]),   % combining mark: consult the hook
+    atom_codes(Text, [0x958]),
     read_term_from_atom(Text, _, [unicode_atoms(error)]).
 
 :- end_tests(utf8proc_unicode_atoms).

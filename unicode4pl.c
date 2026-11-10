@@ -666,31 +666,28 @@ unicode_codepoint_valid(term_t code)
 
 /* Kernel atom-normalisation callback.  Registered with
  * PL_atom_normalize_hook in install_unicode4pl().  Performs NFC
- * normalisation on UTF-8 in place.  On return *len holds the new byte
- * length.  Returns 0 on success, -1 on error.  The NFC result may be
- * longer than the input, e.g., for composition exclusions such as
- * U+0958 that decompose under NFC.  As we cannot write a longer result
- * in place, this is reported as an error.
+ * normalisation of the UTF-8 text in[0..len), writing the result to
+ * out, which may be in.  On entry *size is the capacity of out; on
+ * return it holds the length of the result.  If this exceeds the
+ * capacity, nothing is written.  As utf8proc_map() creates the result
+ * in a new buffer, in-place normalisation is safe.  Note that NFC may be longer than its input, e.g., for
+ * composition exclusions such as U+0958.  Returns 0 on success, -1 on
+ * error.
  */
 static int
-utf8proc_normalize_cb(unsigned char *in, size_t *len)
+utf8proc_normalize_cb(const unsigned char *in, size_t len,
+		      unsigned char *out, size_t *size)
 { utf8proc_uint8_t *result;
   utf8proc_ssize_t out_len;
 
-  out_len = utf8proc_map((uint8_t*)in, *len, &result,
-			 UTF8PROC_STABLE | UTF8PROC_COMPOSE);
+  out_len = utf8proc_map((const uint8_t*)in, (utf8proc_ssize_t)len,
+			 &result, UTF8PROC_STABLE | UTF8PROC_COMPOSE);
   if ( out_len < 0 )
     return -1;
 
-  if ( (size_t)out_len > *len )
-  { free(result);
-    return -1;
-  }
-  if ( (size_t)out_len != *len ||
-       memcmp(result, in, (size_t)out_len) != 0 )
-  { memcpy(in, result, (size_t)out_len);
-    *len = (size_t)out_len;
-  }
+  if ( (size_t)out_len <= *size )
+    memcpy(out, result, (size_t)out_len);
+  *size = (size_t)out_len;
   free(result);
   return 0;
 }
