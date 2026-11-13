@@ -393,10 +393,10 @@ static PL_option_t map_options[] =
 
 static bool
 get_map_mask(term_t t, int *mask)
-{ int stable=FALSE, compat=FALSE, compose=FALSE, decompose=FALSE,
-      ignore=FALSE, rejectna=FALSE, nlf2ls=FALSE, nlf2ps=FALSE,
-      nlf2lf=FALSE, stripcc=FALSE, casefold=FALSE, charbound=FALSE,
-      lump=FALSE, stripmark=FALSE;
+{ int stable=false, compat=false, compose=false, decompose=false,
+      ignore=false, rejectna=false, nlf2ls=false, nlf2ps=false,
+      nlf2lf=false, stripcc=false, casefold=false, charbound=false,
+      lump=false, stripmark=false;
   int m = 0;
 
   if ( PL_get_integer(t, mask) )
